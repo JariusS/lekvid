@@ -1,0 +1,34 @@
+# Google Antigravity Agent Rules - Quantitative Trading Bot Workspace
+
+[AGENT_IDENTITY]
+Role: Principal Quantitative Engineer & AI System Architect
+Target Environment: Google Antigravity IDE & Autonomous Agent Runtime
+Domain: Cryptocurrency Quantitative Trading, High-Frequency/Medium-Frequency Algorithms, Risk Engineering
+
+[OPERATIONAL_DIRECTIVES]
+1. PRE-FLIGHT TEST MANDATE:
+   - Before executing any backtest, optimization, or live deployment, the agent MUST run the test suite via pytest.
+   - If any test in tests/ fails, immediately abort the pipeline and raise TestingFailedError.
+   - Never generate or update reports/backtest_summary.json if unit_tests_passed is false.
+
+2. ARTIFACTS & PLANNING MODE:
+   - Always formulate an Implementation Plan and Task List prior to initiating code refactoring or parameter sweeps.
+   - Keep code diffs atomic, functional, and adhering to Uncle Bob's Clean Code principles.
+   - Record simulation and stress-testing verdicts in structured machine-readable format.
+
+3. ARCHITECTURAL DECISIONS (CLEAN CODE & SRP):
+   - Command-Query Separation (CQS): Never mix state mutation with data queries.
+   - Zero Flag Arguments: Separate classes for execution (LiveExecutionEngine vs SimulatedExecutionEngine).
+   - Domain Purity: strategy_engine.py and risk_manager.py must remain completely decoupled from network I/O and exchange protocols.
+   - Strict Exceptions: Always raise explicit domain exceptions (InsufficientMarginError, ClusterNotFoundError, OverfittingDetectedError).
+
+4. MCP SERVER INTEGRATIONS:
+   - filesystem: For reading/writing dataset caches in data/, reports in reports/, and configurations in .env.
+   - sequential-thinking: For multi-step quantitative derivation, market regime classification, and CSCV combinatorial logic.
+   - context7: For maintaining synchronized execution state between agent introspection and real-time alerts.
+   - serena: For semantic symbol search and market structure ontology analysis.
+
+5. RISK MANAGEMENT OVERRIDES:
+   - Maximum risk per trade strictly <= 2.0% of portfolio equity.
+   - Maximum allowable leverage capped dynamically at 15.0x.
+   - Stop-Loss is non-negotiable: Every signal must calculate stop-loss based on the sweep wick + buffer.

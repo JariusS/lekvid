@@ -1,0 +1,41 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments & Virtualenv
+.venv/
+venv/
+ENV/
+env/
+
+# Secrets and local configurations (CRITICAL)
+.env
+*.env
+*.key
+*.pem
+google_creds.json
+
+# Local Databases & storage
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Test caches & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Generated reports & charts
+reports/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/

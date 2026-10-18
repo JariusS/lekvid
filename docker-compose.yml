@@ -1,0 +1,11 @@
+services:
+  bot_02_liquidity_sweep:
+    build: .
+    container_name: bot_02_liquidity_sweep
+    restart: unless-stopped
+    volumes:
+      - ./reports:/app/reports
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
