@@ -35,6 +35,17 @@ class RiskManager:
         max_units_by_leverage = max_notional / entry_price
 
         final_units = min(unlevered_units, max_units_by_leverage)
+
+        # Ensure order satisfies Bybit minimum notional threshold ($5.00) for deposits >= $50
+        min_notional_floor = 5.0
+        current_notional = final_units * entry_price
+        if current_notional < min_notional_floor:
+            min_required_units = min_notional_floor / entry_price
+            min_margin = min_notional_floor / leverage
+            # Allow minimum notional if required margin is within safe 40% margin limit of account
+            if min_margin <= account_balance * 0.40:
+                final_units = min_required_units
+
         required_margin = (final_units * entry_price) / leverage
         if required_margin > account_balance:
             raise InsufficientMarginError(

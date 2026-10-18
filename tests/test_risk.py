@@ -64,3 +64,26 @@ def test_var_and_expected_shortfall():
 
     assert var_95 > 0.0
     assert es >= var_95
+
+
+def test_small_deposit_fifty_dollars():
+    manager = RiskManager(max_risk_pct=0.02)
+    deposit = 50.0  # Micro account starting from $50
+    entry_price = 150.0  # e.g. SOLUSDT
+    stop_loss = 147.0    # 2% stop loss
+    leverage = 5.0
+
+    units = manager.calculate_position_size(
+        account_balance=deposit,
+        entry_price=entry_price,
+        stop_loss_price=stop_loss,
+        leverage=leverage
+    )
+
+    notional = units * entry_price
+    required_margin = notional / leverage
+
+    # Must satisfy Bybit $5 minimum notional
+    assert notional >= 5.0
+    # Margin must not exceed account balance ($50)
+    assert required_margin <= deposit

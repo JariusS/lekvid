@@ -178,7 +178,18 @@ def execute_live_pipeline(dry_run: bool = True, symbol: str = "BTCUSDT", poll_in
                     time.sleep(poll_interval)
                     continue
 
-                account_balance = engine.get_balance() or 100_000.0
+                # Dynamically sync active symbol from Telegram UI
+                if hasattr(bot_ui, "active_symbol") and bot_ui.active_symbol != symbol:
+                    symbol = bot_ui.active_symbol
+                    print(f"🔄 Active trading pair switched via Telegram UI to: {symbol}")
+
+                account_balance = engine.get_balance()
+                if not account_balance or account_balance <= 0.0:
+                    account_balance = 50.0 if dry_run else 0.0
+
+                if not dry_run and account_balance < 5.0:
+                    time.sleep(poll_interval)
+                    continue
 
                 # 1. Fetch latest 15m candles
                 raw_df = ingestor.fetch_bybit_v5_kline(symbol, interval="15", limit=60)
