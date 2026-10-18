@@ -25,6 +25,7 @@ from telebot.types import (
 )
 
 from config import settings
+from data_ingestion import MarketDataIngestor
 from database import DatabaseManager
 from execution_engine import BaseExecutionEngine
 from models import TradingSignal
@@ -47,6 +48,11 @@ class TelegramBotUI:
         self.is_configured = bool(self.bot_token and self.chat_id)
         self.is_paused = False
         self.trade_mode = "AUTO"  # "AUTO", "LONG_ONLY", "SHORT_ONLY"
+        self.active_symbol = settings.DEFAULT_SYMBOL
+        self.ingestor = MarketDataIngestor()
+        self._cached_top_coins = []
+        self._top_coins_last_updated = 0.0
+        self._top_cache_ttl = 900.0  # 15 minutes TTL
 
         if not self.is_configured:
             return
@@ -57,6 +63,21 @@ class TelegramBotUI:
         # Start non-blocking polling thread
         self.poll_thread = threading.Thread(target=self._start_polling, daemon=True)
         self.poll_thread.start()
+
+    def _get_dynamic_top_10(self, force_refresh: bool = False) -> list:
+        now = time.time()
+        if not force_refresh and self._cached_top_coins and (now - self._top_coins_last_updated) < self._top_cache_ttl:
+            return self._cached_top_coins
+
+        try:
+            fresh = self.ingestor.fetch_top_linear_tickers(limit=10, min_turnover=50_000_000.0)
+            if fresh:
+                self._cached_top_coins = fresh
+                self._top_coins_last_updated = now
+        except Exception as e:
+            logger.error(f"Error refreshing dynamic top 10: {e}")
+
+        return self._cached_top_coins
 
     def _start_polling(self) -> None:
         while True:
@@ -233,15 +254,52 @@ class TelegramBotUI:
         @self.bot.message_handler(commands=['top'])
         def cmd_top(msg: Message):
             if not self._is_auth(msg): return
-            text = (
-                "🏆 <b>Мониторинг ликвидности (Top Watchlist):</b>\n\n"
-                "1. <b>BTCUSDT</b> — Основная пара (Кластеры: >$100M)\n"
-                "2. <b>ETHUSDT</b> — Высокая волатильность\n"
-                "3. <b>SOLUSDT</b> — Агрессивный импульсный свип\n\n"
-                f"• Текущая активная пара: <code>{settings.DEFAULT_SYMBOL}</code>\n"
-                f"• Таймфрейм: <code>{settings.TIMEFRAME}</code>"
+            coins = self._get_dynamic_top_10()
+            now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+
+            lines = [
+                "🏆 <b>Топ-10 монет Bybit V5 (Авто-обновление каждые 15 мин):</b>",
+                "<i>Критерии: оборот > $50M, деривативный интерес, внутридневная волатильность.</i>\n"
+            ]
+
+            markup = InlineKeyboardMarkup()
+            # Top row quick select buttons
+            row_buttons = []
+            for i, c in enumerate(coins[:10], start=1):
+                sym = c["symbol"]
+                turnover_m = c["turnover"] / 1_000_000
+                p = c["last_price"]
+                v = c["volatility_pct"]
+                chg = c["change_24h_pct"]
+                chg_icon = "🟢" if chg >= 0 else "🔴"
+                is_active = " ⭐" if sym == self.active_symbol else ""
+
+                price_fmt = f"${p:,.4f}" if p < 1.0 else f"${p:,.2f}"
+                lines.append(
+                    f"<b>{i:2d}. {sym}{is_active}</b>\n"
+                    f"   • Цена: <b>{price_fmt}</b> ({chg_icon} {chg:+.2f}%)\n"
+                    f"   • Оборот 24h: <b>${turnover_m:,.1f}M</b> | Волатильность: <b>{v:.2f}%</b>"
+                )
+
+            lines.append(f"\n🕒 Данные актуальны на: <code>{now_str}</code>")
+            lines.append(f"🎯 Текущая рабочая пара бота: <code>{self.active_symbol}</code>")
+
+            # Inline switcher for top 3 and refresh
+            markup.row(
+                InlineKeyboardButton("⚡ BTC", callback_data="select_sym_BTCUSDT"),
+                InlineKeyboardButton("⚡ ETH", callback_data="select_sym_ETHUSDT"),
+                InlineKeyboardButton("⚡ SOL", callback_data="select_sym_SOLUSDT")
             )
-            self.bot.send_message(msg.chat.id, text)
+            markup.row(
+                InlineKeyboardButton("⚡ NEAR", callback_data="select_sym_NEARUSDT"),
+                InlineKeyboardButton("⚡ XRP", callback_data="select_sym_XRPUSDT"),
+                InlineKeyboardButton("⚡ DOGE", callback_data="select_sym_DOGEUSDT")
+            )
+            markup.row(
+                InlineKeyboardButton("🔄 Обновить сейчас (Кэш 15м)", callback_data="refresh_top")
+            )
+
+            self.bot.send_message(msg.chat.id, "\n".join(lines), reply_markup=markup)
 
         @self.bot.message_handler(commands=['sync_sheets'])
         def cmd_sync_sheets(msg: Message):
@@ -337,6 +395,70 @@ class TelegramBotUI:
             if str(call.message.chat.id) != self.chat_id: return
             self.bot.answer_callback_query(call.id, "Отменено")
             self.bot.send_message(call.message.chat.id, "✅ Экстренное закрытие отменено.")
+
+        @self.bot.callback_query_handler(func=lambda c: c.data == "refresh_top")
+        def callback_refresh_top(call: CallbackQuery):
+            if str(call.message.chat.id) != self.chat_id: return
+            self.bot.answer_callback_query(call.id, "Обновляю данные с Bybit...")
+            coins = self._get_dynamic_top_10(force_refresh=True)
+            now_str = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+            lines = [
+                "🏆 <b>Топ-10 монет Bybit V5 (Обновлено):</b>",
+                "<i>Критерии: оборот > $50M, деривативный интерес, внутридневная волатильность.</i>\n"
+            ]
+            for i, c in enumerate(coins[:10], start=1):
+                sym = c["symbol"]
+                turnover_m = c["turnover"] / 1_000_000
+                p = c["last_price"]
+                v = c["volatility_pct"]
+                chg = c["change_24h_pct"]
+                chg_icon = "🟢" if chg >= 0 else "🔴"
+                is_active = " ⭐" if sym == self.active_symbol else ""
+                price_fmt = f"${p:,.4f}" if p < 1.0 else f"${p:,.2f}"
+                lines.append(
+                    f"<b>{i:2d}. {sym}{is_active}</b>\n"
+                    f"   • Цена: <b>{price_fmt}</b> ({chg_icon} {chg:+.2f}%)\n"
+                    f"   • Оборот 24h: <b>${turnover_m:,.1f}M</b> | Волатильность: <b>{v:.2f}%</b>"
+                )
+            lines.append(f"\n🕒 Данные актуальны на: <code>{now_str}</code>")
+            lines.append(f"🎯 Текущая рабочая пара бота: <code>{self.active_symbol}</code>")
+
+            markup = InlineKeyboardMarkup()
+            markup.row(
+                InlineKeyboardButton("⚡ BTC", callback_data="select_sym_BTCUSDT"),
+                InlineKeyboardButton("⚡ ETH", callback_data="select_sym_ETHUSDT"),
+                InlineKeyboardButton("⚡ SOL", callback_data="select_sym_SOLUSDT")
+            )
+            markup.row(
+                InlineKeyboardButton("⚡ NEAR", callback_data="select_sym_NEARUSDT"),
+                InlineKeyboardButton("⚡ XRP", callback_data="select_sym_XRPUSDT"),
+                InlineKeyboardButton("⚡ DOGE", callback_data="select_sym_DOGEUSDT")
+            )
+            markup.row(
+                InlineKeyboardButton("🔄 Обновить сейчас (Кэш 15м)", callback_data="refresh_top")
+            )
+            try:
+                self.bot.edit_message_text(
+                    chat_id=call.message.chat.id,
+                    message_id=call.message.message_id,
+                    text="\n".join(lines),
+                    reply_markup=markup
+                )
+            except Exception:
+                pass
+
+        @self.bot.callback_query_handler(func=lambda c: c.data.startswith("select_sym_"))
+        def callback_select_symbol(call: CallbackQuery):
+            if str(call.message.chat.id) != self.chat_id: return
+            new_sym = call.data.replace("select_sym_", "")
+            self.active_symbol = new_sym
+            self.db.set_setting("active_symbol", new_sym)
+            self.bot.answer_callback_query(call.id, f"Выбрана пара: {new_sym}")
+            self.bot.send_message(
+                call.message.chat.id,
+                f"✅ <b>Активная торговая пара переключена:</b> <code>{new_sym}</code>\n"
+                f"Сканер ликвидности ориентирован на поиск свипов по {new_sym}."
+            )
 
         # --- Text buttons routing ---
         @self.bot.message_handler(func=lambda m: True)

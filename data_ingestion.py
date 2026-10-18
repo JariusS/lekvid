@@ -70,6 +70,41 @@ class MarketDataIngestor:
         df = df.ffill().bfill()
         return df
 
+    def fetch_top_linear_tickers(self, limit: int = 10, min_turnover: float = 50_000_000.0) -> List[Dict]:
+        """Fetch and filter top USDT perpetual contracts by 24h turnover and volatility."""
+        url = "https://api.bybit.com/v5/market/tickers"
+        params = {"category": "linear"}
+        try:
+            resp = requests.get(url, params=params, timeout=self.timeout)
+            resp.raise_for_status()
+            tickers = resp.json().get("result", {}).get("list", [])
+            excluded = ["2L", "2S", "3L", "3S", "SOXL"]
+            filtered = []
+            for t in tickers:
+                sym = t.get("symbol", "")
+                if not sym.endswith("USDT") or any(p in sym for p in excluded):
+                    continue
+                turnover = float(t.get("turnover24h", 0.0))
+                if turnover < min_turnover:
+                    continue
+                last_p = float(t.get("lastPrice", 0.0))
+                high_p = float(t.get("highPrice24h", last_p))
+                low_p = float(t.get("lowPrice24h", last_p))
+                vol_pct = ((high_p - low_p) / last_p) * 100.0 if last_p > 0 else 0.0
+                change_pct = float(t.get("price24hPcnt", 0.0)) * 100.0
+                filtered.append({
+                    "symbol": sym,
+                    "turnover": turnover,
+                    "last_price": last_p,
+                    "volatility_pct": vol_pct,
+                    "change_24h_pct": change_pct
+                })
+            filtered.sort(key=lambda x: x["turnover"], reverse=True)
+            return filtered[:limit]
+        except Exception:
+            fallback = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "NEARUSDT", "XRPUSDT", "SANDUSDT", "TIAUSDT", "ENAUSDT", "WLDUSDT", "DOGEUSDT"]
+            return [{"symbol": s, "turnover": 0.0, "last_price": 0.0, "volatility_pct": 0.0, "change_24h_pct": 0.0} for s in fallback[:limit]]
+
 
 class FeatureEngineeringEngine:
     @staticmethod
