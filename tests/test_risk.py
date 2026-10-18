@@ -12,15 +12,15 @@ from risk_manager import RiskManager
 def test_calculate_dynamic_leverage_bounds():
     manager = RiskManager()
     
-    # Ultra-tight stop loss (0.1%): should hit maximum ceiling of 15.0x
+    # Ultra-tight stop loss (0.1%): must strictly remain 1.0x
     lev_tight = manager.calculate_dynamic_leverage(entry_price=65000.0, stop_loss_price=64935.0)
-    assert lev_tight == 15.0
+    assert lev_tight == 1.0
 
-    # Very wide stop loss (25%): 1.0 / (0.25 + 0.005) = 3.9x
+    # Very wide stop loss (25%): must strictly remain 1.0x
     lev_wide = manager.calculate_dynamic_leverage(entry_price=65000.0, stop_loss_price=48750.0)
-    assert lev_wide == 3.9
+    assert lev_wide == 1.0
 
-    # Extremely wide stop loss (>100% equivalent): hits floor of 1.0x
+    # Extremely wide stop loss (>100% equivalent): must strictly remain 1.0x
     lev_floor = manager.calculate_dynamic_leverage(entry_price=65000.0, stop_loss_price=0.0)
     assert lev_floor == 1.0
 

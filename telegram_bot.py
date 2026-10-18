@@ -29,6 +29,7 @@ from data_ingestion import MarketDataIngestor
 from database import DatabaseManager
 from execution_engine import BaseExecutionEngine
 from models import TradingSignal
+from version import __version__
 
 logger = logging.getLogger("TelegramBotUI")
 
@@ -116,7 +117,7 @@ class TelegramBotUI:
         def cmd_start(msg: Message):
             if not self._is_auth(msg): return
             text = (
-                "🤖 <b>Antigravity Liquidity Sweep Bot v2.0</b>\n\n"
+                f"🤖 <b>Antigravity Liquidity Sweep Bot v{__version__}</b>\n\n"
                 "Система активна и отслеживает кластеры ликвидности.\n"
                 "Используйте кнопки меню внизу для управления:"
             )
@@ -142,8 +143,10 @@ class TelegramBotUI:
             open_count = len(self.db.get_open_trades())
             text = (
                 f"⚙️ <b>Статус торговой системы:</b>\n\n"
+                f"• Версия: <b>v{__version__}</b>\n"
                 f"• Состояние сканера: <b>{status_icon}</b>\n"
                 f"• Направление торговли: <b>{self.trade_mode}</b>\n"
+                f"• Плечо: <b>{settings.MAX_LEVERAGE}x (СТРОГО x1)</b>\n"
                 f"• Открытых позиций: <b>{open_count}</b>\n"
                 f"• Рабочая пара: <code>{settings.DEFAULT_SYMBOL}</code> [{settings.TIMEFRAME}]\n"
                 f"• Стратегия: <i>Liquidity Sweep & Reclaim</i>\n"

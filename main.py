@@ -21,6 +21,7 @@ from execution_engine import LiveExecutionEngine, SimulatedExecutionEngine
 from market_simulator import SyntheticGenerativeEngine
 from models import BacktestSummary, Candle, LiquidationCluster, MarketRegime, SignalSide, TestingFailedError
 from stress_tester import BacktestEngine
+from version import __version__
 from visualizer import EquityCurveVisualizer
 
 
@@ -157,10 +158,11 @@ def execute_live_pipeline(dry_run: bool = True, symbol: str = "BTCUSDT", poll_in
     fe = FeatureEngineeringEngine()
 
     startup_msg = (
-        f"🤖 <b>Antigravity Liquidity Sweep Bot v2.0 Started</b>\n\n"
+        f"🤖 <b>Antigravity Liquidity Sweep Bot v{__version__} Started</b>\n\n"
         f"• <b>Символ:</b> <code>{symbol}</code>\n"
         f"• <b>Режим:</b> <code>{'SIMULATION (DRY-RUN)' if dry_run else 'REAL LIVE'}</code>\n"
         f"• <b>Стратегия:</b> Liquidity Sweep & Reclaim (15m)\n"
+        f"• <b>Плечо:</b> {settings.MAX_LEVERAGE}x (СТРОГО x1)\n"
         f"• <b>Риск на сделку:</b> {settings.MAX_RISK_PER_TRADE_PCT*100:.1f}%\n"
         f"• <b>Статус:</b> Сканер активен, слушаем триггеры..."
     )

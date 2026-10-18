@@ -83,8 +83,7 @@ class SweepReclaimStrategy:
     ) -> TradingSignal:
         stop_loss = candle.low * (1.0 - settings.STOP_LOSS_BUFFER_PCT)
         sl_distance_pct = max((candle.close - stop_loss) / candle.close, 0.005)
-        raw_leverage = 1.0 / (sl_distance_pct + settings.MARGIN_BUFFER)
-        calculated_leverage = round(min(settings.MAX_LEVERAGE, max(settings.MIN_LEVERAGE, raw_leverage)), 1)
+        calculated_leverage = 1.0
         tp1_price = max(vwap_price, candle.close * 1.01)
         tp2_price = candle.close * (1.0 + (sl_distance_pct * 3.0))
 
@@ -143,8 +142,7 @@ class SweepReclaimStrategy:
     ) -> TradingSignal:
         stop_loss = candle.high * (1.0 + settings.STOP_LOSS_BUFFER_PCT)
         sl_distance_pct = max((stop_loss - candle.close) / candle.close, 0.005)
-        raw_leverage = 1.0 / (sl_distance_pct + settings.MARGIN_BUFFER)
-        calculated_leverage = round(min(settings.MAX_LEVERAGE, max(settings.MIN_LEVERAGE, raw_leverage)), 1)
+        calculated_leverage = 1.0
         tp1_price = min(vwap_price, candle.close * 0.99)
         tp2_price = candle.close * (1.0 - (sl_distance_pct * 3.0))
 

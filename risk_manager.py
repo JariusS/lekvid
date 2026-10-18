@@ -54,10 +54,8 @@ class RiskManager:
         return round(final_units, 4)
 
     def calculate_dynamic_leverage(self, entry_price: float, stop_loss_price: float) -> float:
-        sl_distance_pct = abs(entry_price - stop_loss_price) / entry_price
-        raw_leverage = 1.0 / (sl_distance_pct + settings.MARGIN_BUFFER)
-        bounded = min(settings.MAX_LEVERAGE, max(settings.MIN_LEVERAGE, raw_leverage))
-        return round(bounded, 1)
+        """Enforces strictly 1.0x leverage to eliminate liquidation risk."""
+        return 1.0
 
     @staticmethod
     def calculate_value_at_risk_95(returns: np.ndarray) -> float:

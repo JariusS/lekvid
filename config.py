@@ -30,8 +30,8 @@ class AppConfig(BaseSettings):
     
     # Quantitative Risk Limits
     MAX_RISK_PER_TRADE_PCT: float = Field(default=0.02, description="Max 2% capital risk per trade")
-    MAX_LEVERAGE: float = Field(default=15.0, description="Hard cap on dynamic leverage")
-    MIN_LEVERAGE: float = Field(default=1.0, description="Minimum leverage floor")
+    MAX_LEVERAGE: float = Field(default=1.0, description="Hard cap on leverage - strictly 1.0x")
+    MIN_LEVERAGE: float = Field(default=1.0, description="Minimum leverage floor - strictly 1.0x")
     MARGIN_BUFFER: float = Field(default=0.005, description="Margin buffer for dynamic leverage formula")
     STOP_LOSS_BUFFER_PCT: float = Field(default=0.0025, description="0.25% buffer beyond sweep wick")
     TRAILING_STOP_CALLBACK_PCT: float = Field(default=0.006, description="0.6% trailing callback")

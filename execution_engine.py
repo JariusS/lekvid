@@ -186,12 +186,13 @@ class LiveExecutionEngine(BaseExecutionEngine):
 
         endpoint = f"{self.base_url}/v5/position/set-leverage"
         timestamp = str(int(time.time() * 1000))
-        lev_int = str(max(1, int(round(leverage))))
+        # Strictly enforce 1.0x leverage (no higher leverage allowed)
+        lev_str = "1"
         payload = {
             "category": "linear",
             "symbol": symbol,
-            "buyLeverage": lev_int,
-            "sellLeverage": lev_int,
+            "buyLeverage": lev_str,
+            "sellLeverage": lev_str,
         }
         body_str = json.dumps(payload)
         signature = self._generate_signature(timestamp, body_str)
