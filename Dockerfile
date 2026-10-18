@@ -18,4 +18,4 @@ COPY . .
 
 RUN mkdir -p reports
 
-CMD ["python", "main.py", "--mode", "live", "--dry-run", "--symbol", "BTCUSDT"]
+CMD ["python", "main.py", "--mode", "live", "--no-dry-run", "--symbol", "BTCUSDT"]

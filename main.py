@@ -313,7 +313,9 @@ def main():
     parser.add_argument("--symbol", default="BTCUSDT", help="Trading pair symbol")
     parser.add_argument("--timeframe", default="15m", help="Candle timeframe")
     parser.add_argument("--regime", default="flash_crash", choices=["bullish", "bearish", "sideways", "flash_crash"])
-    parser.add_argument("--dry-run", action="store_true", default=True, help="Run live mode in dry-run simulation")
+    parser.add_argument("--dry-run", dest="dry_run", action="store_true", help="Run live mode in dry-run simulation")
+    parser.add_argument("--no-dry-run", dest="dry_run", action="store_false", help="Run live mode with real Bybit orders")
+    parser.set_defaults(dry_run=False)
     args = parser.parse_args()
 
     if args.mode == "backtest":
